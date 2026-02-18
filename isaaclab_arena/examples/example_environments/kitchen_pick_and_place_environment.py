@@ -41,6 +41,9 @@ class KitchenPickAndPlaceEnvironment(ExampleEnvironmentBase):
                 rotation_wxyz=(1.0, 0.0, 0.0, 0.0),
             )
         )
+        # Keep G1 at a deterministic table-side spawn for arm-follow debugging.
+        if args_cli.embodiment.startswith("g1_"):
+            embodiment.set_initial_pose(Pose(position_xyz=(0.0, 0.0, 0.0), rotation_wxyz=(1.0, 0.0, 0.0, 0.0)))
 
         # TODO(alexmillane, 2025.09.24): Add automatic object type detection of ObjectReferences.
         destination_location = ObjectReference(

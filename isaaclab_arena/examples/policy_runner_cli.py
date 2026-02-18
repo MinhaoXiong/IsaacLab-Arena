@@ -115,7 +115,11 @@ def setup_policy_argument_parser(args_parser: argparse.ArgumentParser | None = N
 def create_policy(args: argparse.Namespace) -> tuple[PolicyBase, int]:
     """Create the appropriate policy based on the arguments and return (policy, num_steps)."""
     if args.policy_type == "replay":
-        policy = ReplayActionPolicy(args.replay_file_path, args.episode_name)
+        policy = ReplayActionPolicy(
+            replay_file_path=args.replay_file_path,
+            device=args.device,
+            episode_name=args.episode_name,
+        )
         num_steps = len(policy)
     elif args.policy_type == "zero_action":
         policy = ZeroActionPolicy()
