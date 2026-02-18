@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
+import math
 
 from isaaclab_arena.examples.example_environments.example_environment_base import ExampleEnvironmentBase
 
@@ -17,6 +18,13 @@ from isaaclab_arena.examples.example_environments.example_environment_base impor
 class KitchenPickAndPlaceEnvironment(ExampleEnvironmentBase):
 
     name: str = "kitchen_pick_and_place"
+
+    @staticmethod
+    def _parse_xyz(text: str, name: str) -> tuple[float, float, float]:
+        values = [float(x.strip()) for x in text.split(",")]
+        if len(values) != 3:
+            raise ValueError(f"{name} must be csv xyz with 3 values, got: {text}")
+        return (values[0], values[1], values[2])
 
     def get_env(self, args_cli: argparse.Namespace):  # -> IsaacLabArenaEnvironment:
         from isaaclab_arena.assets.object_base import ObjectType
@@ -43,7 +51,10 @@ class KitchenPickAndPlaceEnvironment(ExampleEnvironmentBase):
         )
         # Keep G1 at a deterministic table-side spawn for arm-follow debugging.
         if args_cli.embodiment.startswith("g1_"):
-            embodiment.set_initial_pose(Pose(position_xyz=(0.0, 0.0, 0.0), rotation_wxyz=(1.0, 0.0, 0.0, 0.0)))
+            g1_init_pos_w = self._parse_xyz(args_cli.g1_init_pos_w, "g1_init_pos_w")
+            yaw_rad = math.radians(float(args_cli.g1_init_yaw_deg))
+            g1_init_quat_wxyz = (math.cos(0.5 * yaw_rad), 0.0, 0.0, math.sin(0.5 * yaw_rad))
+            embodiment.set_initial_pose(Pose(position_xyz=g1_init_pos_w, rotation_wxyz=g1_init_quat_wxyz))
 
         # TODO(alexmillane, 2025.09.24): Add automatic object type detection of ObjectReferences.
         destination_location = ObjectReference(
@@ -70,3 +81,15 @@ class KitchenPickAndPlaceEnvironment(ExampleEnvironmentBase):
         # NOTE(alexmillane, 2025.09.04): We need a teleop device argument in order
         # to be used in the record_demos.py script.
         parser.add_argument("--teleop_device", type=str, default=None)
+        parser.add_argument(
+            "--g1-init-pos-w",
+            type=str,
+            default="0.05,0.0,0.0",
+            help="G1 initial base position xyz in world frame for kitchen scene.",
+        )
+        parser.add_argument(
+            "--g1-init-yaw-deg",
+            type=float,
+            default=0.0,
+            help="G1 initial yaw in degrees for kitchen scene.",
+        )
