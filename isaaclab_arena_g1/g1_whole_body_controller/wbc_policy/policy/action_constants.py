@@ -31,6 +31,12 @@ BASE_HEIGHT_CMD_END_IDX = 20
 TORSO_ORIENTATION_RPY_CMD_START_IDX = 20
 TORSO_ORIENTATION_RPY_CMD_END_IDX = 23
 
+# Optional InspireHand finger angles (12 per hand) appended after base 23D action
+# When action dim > 23, indices 23-34 are right hand finger angles (12 DOF)
+RIGHT_FINGER_ANGLES_START_IDX = 23
+RIGHT_FINGER_ANGLES_END_IDX = 35
+INSPIRE_HAND_NUM_JOINTS = 12
+
 # Navigation p-controller params
 NAVIGATE_THRESHOLD = 1e-4
 

@@ -28,6 +28,8 @@ from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constan
     LEFT_WRIST_QUAT_END_IDX,
     LEFT_WRIST_QUAT_START_IDX,
     NAVIGATE_THRESHOLD,
+    RIGHT_FINGER_ANGLES_END_IDX,
+    RIGHT_FINGER_ANGLES_START_IDX,
     RIGHT_HAND_STATE_DIM,
     RIGHT_HAND_STATE_IDX,
     RIGHT_WRIST_LINK_NAME,
@@ -235,7 +237,11 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
 
         # Extract left/right hand state from actions
         left_hand_state = actions_clone[:, LEFT_HAND_STATE_IDX].squeeze(0).cpu()
-        right_hand_state = actions_clone[:, RIGHT_HAND_STATE_IDX].squeeze(0).cpu()
+        # If action has InspireHand finger angles appended (dim > 23), use them directly
+        if actions_clone.shape[-1] >= RIGHT_FINGER_ANGLES_END_IDX:
+            right_hand_state = actions_clone[:, RIGHT_FINGER_ANGLES_START_IDX:RIGHT_FINGER_ANGLES_END_IDX].squeeze(0).cpu().numpy()
+        else:
+            right_hand_state = actions_clone[:, RIGHT_HAND_STATE_IDX].squeeze(0).cpu()
 
         # Assemble data format for running IK
         body_data = {LEFT_WRIST_LINK_NAME: left_arm_pose, RIGHT_WRIST_LINK_NAME: right_arm_pose}

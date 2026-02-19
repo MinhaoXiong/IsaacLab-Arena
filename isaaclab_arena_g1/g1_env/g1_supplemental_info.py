@@ -60,27 +60,37 @@ class G1SupplementalInfo:
 
     left_hand_actuated_joints: list[str] = field(
         default_factory=lambda: [
-            # Left hand
-            "left_hand_thumb_0_joint",
-            "left_hand_thumb_1_joint",
-            "left_hand_thumb_2_joint",
-            "left_hand_index_0_joint",
-            "left_hand_index_1_joint",
-            "left_hand_middle_0_joint",
-            "left_hand_middle_1_joint",
+            # Left InspireHand (URDF order: 6 independent + 6 mimic)
+            "L_index_proximal_joint",
+            "L_index_intermediate_joint",
+            "L_middle_proximal_joint",
+            "L_middle_intermediate_joint",
+            "L_pinky_proximal_joint",
+            "L_pinky_intermediate_joint",
+            "L_ring_proximal_joint",
+            "L_ring_intermediate_joint",
+            "L_thumb_proximal_yaw_joint",
+            "L_thumb_proximal_pitch_joint",
+            "L_thumb_intermediate_joint",
+            "L_thumb_distal_joint",
         ]
     )
 
     right_hand_actuated_joints: list[str] = field(
         default_factory=lambda: [
-            # Right hand
-            "right_hand_thumb_0_joint",
-            "right_hand_thumb_1_joint",
-            "right_hand_thumb_2_joint",
-            "right_hand_index_0_joint",
-            "right_hand_index_1_joint",
-            "right_hand_middle_0_joint",
-            "right_hand_middle_1_joint",
+            # Right InspireHand (URDF order: 6 independent + 6 mimic)
+            "R_index_proximal_joint",
+            "R_index_intermediate_joint",
+            "R_middle_proximal_joint",
+            "R_middle_intermediate_joint",
+            "R_pinky_proximal_joint",
+            "R_pinky_intermediate_joint",
+            "R_ring_proximal_joint",
+            "R_ring_intermediate_joint",
+            "R_thumb_proximal_yaw_joint",
+            "R_thumb_proximal_pitch_joint",
+            "R_thumb_intermediate_joint",
+            "R_thumb_distal_joint",
         ]
     )
 
@@ -121,22 +131,32 @@ class G1SupplementalInfo:
             "right_wrist_roll_joint": g1_constants.G1_RIGHT_WRIST_ROLL_LIMITS,
             "right_wrist_pitch_joint": g1_constants.G1_RIGHT_WRIST_PITCH_LIMITS,
             "right_wrist_yaw_joint": g1_constants.G1_RIGHT_WRIST_YAW_LIMITS,
-            # Left hand
-            "left_hand_thumb_0_joint": g1_constants.G1_LEFT_HAND_THUMB_0_LIMITS,
-            "left_hand_thumb_1_joint": g1_constants.G1_LEFT_HAND_THUMB_1_LIMITS,
-            "left_hand_thumb_2_joint": g1_constants.G1_LEFT_HAND_THUMB_2_LIMITS,
-            "left_hand_index_0_joint": g1_constants.G1_LEFT_HAND_INDEX_0_LIMITS,
-            "left_hand_index_1_joint": g1_constants.G1_LEFT_HAND_INDEX_1_LIMITS,
-            "left_hand_middle_0_joint": g1_constants.G1_LEFT_HAND_MIDDLE_0_LIMITS,
-            "left_hand_middle_1_joint": g1_constants.G1_LEFT_HAND_MIDDLE_1_LIMITS,
-            # Right hand
-            "right_hand_thumb_0_joint": g1_constants.G1_RIGHT_HAND_THUMB_0_LIMITS,
-            "right_hand_thumb_1_joint": g1_constants.G1_RIGHT_HAND_THUMB_1_LIMITS,
-            "right_hand_thumb_2_joint": g1_constants.G1_RIGHT_HAND_THUMB_2_LIMITS,
-            "right_hand_index_0_joint": g1_constants.G1_RIGHT_HAND_INDEX_0_LIMITS,
-            "right_hand_index_1_joint": g1_constants.G1_RIGHT_HAND_INDEX_1_LIMITS,
-            "right_hand_middle_0_joint": g1_constants.G1_RIGHT_HAND_MIDDLE_0_LIMITS,
-            "right_hand_middle_1_joint": g1_constants.G1_RIGHT_HAND_MIDDLE_1_LIMITS,
+            # Left InspireHand
+            "L_thumb_proximal_yaw_joint": g1_constants.G1_LEFT_HAND_THUMB_PROXIMAL_YAW_LIMITS,
+            "L_thumb_proximal_pitch_joint": g1_constants.G1_LEFT_HAND_THUMB_PROXIMAL_PITCH_LIMITS,
+            "L_index_proximal_joint": g1_constants.G1_LEFT_HAND_INDEX_PROXIMAL_LIMITS,
+            "L_middle_proximal_joint": g1_constants.G1_LEFT_HAND_MIDDLE_PROXIMAL_LIMITS,
+            "L_ring_proximal_joint": g1_constants.G1_LEFT_HAND_RING_PROXIMAL_LIMITS,
+            "L_pinky_proximal_joint": g1_constants.G1_LEFT_HAND_PINKY_PROXIMAL_LIMITS,
+            "L_thumb_intermediate_joint": g1_constants.G1_LEFT_HAND_THUMB_INTERMEDIATE_LIMITS,
+            "L_thumb_distal_joint": g1_constants.G1_LEFT_HAND_THUMB_DISTAL_LIMITS,
+            "L_index_intermediate_joint": g1_constants.G1_LEFT_HAND_INDEX_INTERMEDIATE_LIMITS,
+            "L_middle_intermediate_joint": g1_constants.G1_LEFT_HAND_MIDDLE_INTERMEDIATE_LIMITS,
+            "L_ring_intermediate_joint": g1_constants.G1_LEFT_HAND_RING_INTERMEDIATE_LIMITS,
+            "L_pinky_intermediate_joint": g1_constants.G1_LEFT_HAND_PINKY_INTERMEDIATE_LIMITS,
+            # Right InspireHand
+            "R_thumb_proximal_yaw_joint": g1_constants.G1_RIGHT_HAND_THUMB_PROXIMAL_YAW_LIMITS,
+            "R_thumb_proximal_pitch_joint": g1_constants.G1_RIGHT_HAND_THUMB_PROXIMAL_PITCH_LIMITS,
+            "R_index_proximal_joint": g1_constants.G1_RIGHT_HAND_INDEX_PROXIMAL_LIMITS,
+            "R_middle_proximal_joint": g1_constants.G1_RIGHT_HAND_MIDDLE_PROXIMAL_LIMITS,
+            "R_ring_proximal_joint": g1_constants.G1_RIGHT_HAND_RING_PROXIMAL_LIMITS,
+            "R_pinky_proximal_joint": g1_constants.G1_RIGHT_HAND_PINKY_PROXIMAL_LIMITS,
+            "R_thumb_intermediate_joint": g1_constants.G1_RIGHT_HAND_THUMB_INTERMEDIATE_LIMITS,
+            "R_thumb_distal_joint": g1_constants.G1_RIGHT_HAND_THUMB_DISTAL_LIMITS,
+            "R_index_intermediate_joint": g1_constants.G1_RIGHT_HAND_INDEX_INTERMEDIATE_LIMITS,
+            "R_middle_intermediate_joint": g1_constants.G1_RIGHT_HAND_MIDDLE_INTERMEDIATE_LIMITS,
+            "R_ring_intermediate_joint": g1_constants.G1_RIGHT_HAND_RING_INTERMEDIATE_LIMITS,
+            "R_pinky_intermediate_joint": g1_constants.G1_RIGHT_HAND_PINKY_INTERMEDIATE_LIMITS,
         }
     )
 
@@ -201,25 +221,35 @@ class G1SupplementalInfo:
             # Hand groups
             "left_hand": {
                 "joints": [
-                    "left_hand_index_0_joint",
-                    "left_hand_index_1_joint",
-                    "left_hand_middle_0_joint",
-                    "left_hand_middle_1_joint",
-                    "left_hand_thumb_0_joint",
-                    "left_hand_thumb_1_joint",
-                    "left_hand_thumb_2_joint",
+                    "L_index_proximal_joint",
+                    "L_index_intermediate_joint",
+                    "L_middle_proximal_joint",
+                    "L_middle_intermediate_joint",
+                    "L_pinky_proximal_joint",
+                    "L_pinky_intermediate_joint",
+                    "L_ring_proximal_joint",
+                    "L_ring_intermediate_joint",
+                    "L_thumb_proximal_yaw_joint",
+                    "L_thumb_proximal_pitch_joint",
+                    "L_thumb_intermediate_joint",
+                    "L_thumb_distal_joint",
                 ],
                 "groups": [],
             },
             "right_hand": {
                 "joints": [
-                    "right_hand_index_0_joint",
-                    "right_hand_index_1_joint",
-                    "right_hand_middle_0_joint",
-                    "right_hand_middle_1_joint",
-                    "right_hand_thumb_0_joint",
-                    "right_hand_thumb_1_joint",
-                    "right_hand_thumb_2_joint",
+                    "R_index_proximal_joint",
+                    "R_index_intermediate_joint",
+                    "R_middle_proximal_joint",
+                    "R_middle_intermediate_joint",
+                    "R_pinky_proximal_joint",
+                    "R_pinky_intermediate_joint",
+                    "R_ring_proximal_joint",
+                    "R_ring_intermediate_joint",
+                    "R_thumb_proximal_yaw_joint",
+                    "R_thumb_proximal_pitch_joint",
+                    "R_thumb_intermediate_joint",
+                    "R_thumb_distal_joint",
                 ],
                 "groups": [],
             },

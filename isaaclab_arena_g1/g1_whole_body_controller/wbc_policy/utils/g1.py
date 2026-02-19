@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 from typing import Literal
 
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, retrieve_file_path
@@ -13,6 +14,21 @@ from isaaclab_arena_g1.g1_env.g1_supplemental_info import (
     G1SupplementalInfoWaistUpperBody,
 )
 from isaaclab_arena_g1.g1_env.robot_model import RobotModel
+
+# Local G1+InspireHand URDF directory.
+# Set G1_INSPIRE_HAND_URDF_DIR env var, or it defaults to
+# <Humanoid-gen-pack>/configs/g1_inspirehand (detected via PACK_ROOT or relative to IsaacLab-Arena).
+def _default_inspire_urdf_dir() -> str:
+    env = os.environ.get("G1_INSPIRE_HAND_URDF_DIR")
+    if env:
+        return env
+    pack_root = os.environ.get("PACK_ROOT")
+    if pack_root:
+        return os.path.join(pack_root, "configs", "g1_inspirehand")
+    # Fallback: assume IsaacLab-Arena is under Humanoid-gen-pack/repos/
+    return os.path.join(os.path.dirname(__file__), "../../../../../../configs/g1_inspirehand")
+
+_INSPIRE_HAND_URDF_DIR = _default_inspire_urdf_dir()
 
 
 def instantiate_g1_robot_model(
@@ -31,13 +47,20 @@ def instantiate_g1_robot_model(
         RobotModel: Configured G1 robot model
     """
 
-    robot_model_config = {
-        "asset_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/",
-        "urdf_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/g1_29dof_with_hand.urdf",
-    }
-
-    asset_path_local = retrieve_file_path(robot_model_config["asset_path"], force_download=True)
-    urdf_path_local = retrieve_file_path(robot_model_config["urdf_path"], force_download=True)
+    # Use local G1+InspireHand URDF if available, otherwise fall back to Nucleus
+    local_urdf = os.path.join(_INSPIRE_HAND_URDF_DIR, "g1_29dof_with_inspire_hand.urdf")
+    if os.path.isfile(local_urdf):
+        urdf_path_local = os.path.abspath(local_urdf)
+        asset_path_local = os.path.dirname(urdf_path_local)
+        print(f"[g1] Using local InspireHand URDF: {urdf_path_local}")
+    else:
+        robot_model_config = {
+            "asset_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/",
+            "urdf_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/g1_29dof_with_hand.urdf",
+        }
+        asset_path_local = retrieve_file_path(robot_model_config["asset_path"], force_download=True)
+        urdf_path_local = retrieve_file_path(robot_model_config["urdf_path"], force_download=True)
+        print(f"[g1] Using Nucleus URDF: {urdf_path_local}")
 
     assert waist_location in [
         "lower_body",

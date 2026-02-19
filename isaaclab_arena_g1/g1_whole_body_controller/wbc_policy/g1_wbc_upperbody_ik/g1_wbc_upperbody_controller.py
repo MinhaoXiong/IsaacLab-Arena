@@ -220,22 +220,44 @@ class G1WBCUpperbodyController:
 
         self.in_warmup = True
 
-    def get_hand_joint_pos(self, hand_state):
-        hand_q_desired = np.deg2rad([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        if hand_state == 0:
-            return hand_q_desired
-        else:
-            amp = 0.7
-            hand_q_desired[1] += amp
-            hand_q_desired[2] += amp
+    # BODex joint order -> URDF joint order mapping (12 DOF)
+    # BODex: [thumb_yaw, thumb_pitch, index, middle, ring, pinky,
+    #         thumb_inter, thumb_distal, index_inter, middle_inter, ring_inter, pinky_inter]
+    # URDF:  [index_prox, index_inter, middle_prox, middle_inter, pinky_prox, pinky_inter,
+    #         ring_prox, ring_inter, thumb_yaw, thumb_pitch, thumb_inter, thumb_distal]
+    _BODEX_TO_URDF = [2, 8, 3, 9, 5, 11, 4, 10, 0, 1, 6, 7]
 
-            ampA = 0.6
-            ampB = 1.2
-            hand_q_desired[3] -= ampA
-            hand_q_desired[4] -= ampB
-            hand_q_desired[5] -= ampA
-            hand_q_desired[6] -= ampB
-        return hand_q_desired
+    def get_hand_joint_pos(self, hand_state):
+        """Map hand state to 12 InspireHand joint angles in URDF order.
+
+        hand_state: scalar 0=open, 1=close, or np.ndarray of 12 joint angles (BODex order).
+        """
+        if isinstance(hand_state, np.ndarray) and hand_state.size == 12:
+            # Reorder from BODex order to URDF order
+            return hand_state[self._BODEX_TO_URDF].copy()
+
+        # URDF order: index, index_i, middle, middle_i, pinky, pinky_i,
+        #             ring, ring_i, thumb_yaw, thumb_pitch, thumb_i, thumb_d
+        hand_q = np.zeros(12)
+        if hand_state == 0:
+            return hand_q
+
+        # Closed pose
+        index_v = 1.2
+        thumb_pitch_v = 0.35
+        hand_q[0] = index_v   # index_prox
+        hand_q[1] = index_v   # index_inter (mimic 1.0x)
+        hand_q[2] = index_v   # middle_prox
+        hand_q[3] = index_v   # middle_inter
+        hand_q[4] = index_v   # pinky_prox
+        hand_q[5] = index_v   # pinky_inter
+        hand_q[6] = index_v   # ring_prox
+        hand_q[7] = index_v   # ring_inter
+        hand_q[8] = 0.9       # thumb_yaw
+        hand_q[9] = thumb_pitch_v  # thumb_pitch
+        hand_q[10] = thumb_pitch_v * 1.6  # thumb_inter
+        hand_q[11] = thumb_pitch_v * 2.4  # thumb_distal
+        return hand_q
 
     def inverse_kinematics(
         self,
@@ -259,7 +281,7 @@ class G1WBCUpperbodyController:
             body_q = self.body_ik_solver(body_target_pose)
 
         left_hand_joint_pos = self.get_hand_joint_pos(left_hand_state)
-        right_hand_joint_pos = -self.get_hand_joint_pos(right_hand_state)
+        right_hand_joint_pos = self.get_hand_joint_pos(right_hand_state)
 
         body_q[self.full_robot.get_hand_actuated_joint_indices(side="left")] = left_hand_joint_pos
         body_q[self.full_robot.get_hand_actuated_joint_indices(side="right")] = right_hand_joint_pos
