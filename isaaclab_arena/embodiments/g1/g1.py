@@ -4,8 +4,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import torch
+import os
 from collections.abc import Sequence
 from dataclasses import MISSING
+from pathlib import Path
 
 import isaaclab.envs.mdp as base_mdp
 import isaaclab.sim as sim_utils  # noqa: F401
@@ -22,7 +24,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers.action_manager import ActionTermCfg
 from isaaclab.sensors import CameraCfg, TiledCameraCfg  # noqa: F401
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 import isaaclab_arena.terms.transforms as transforms_terms
 from isaaclab_arena.assets.register import register_asset
@@ -33,6 +35,102 @@ from isaaclab_arena_g1.g1_env.mdp import g1_events as g1_events_mdp
 from isaaclab_arena_g1.g1_env.mdp import g1_observations as g1_observations_mdp
 from isaaclab_arena_g1.g1_env.mdp.actions.g1_decoupled_wbc_joint_action_cfg import G1DecoupledWBCJointActionCfg
 from isaaclab_arena_g1.g1_env.mdp.actions.g1_decoupled_wbc_pink_action_cfg import G1DecoupledWBCPinkActionCfg
+
+
+def _resolve_g1_inspire_hand_usd_path() -> str:
+    """Resolve G1 Inspire hand USD path with local-first fallback."""
+    env_override = os.environ.get("G1_INSPIRE_HAND_USD_PATH")
+    if env_override:
+        if "://" in env_override or os.path.exists(env_override):
+            return env_override
+
+    # Locate Humanoid-gen-pack and workspace root from this file path.
+    this_file = Path(__file__).resolve()
+    pack_root = None
+    for parent in this_file.parents:
+        if (parent / "configs" / "g1_inspirehand" / "g1_29dof_with_inspire_hand.urdf").exists():
+            pack_root = parent
+            break
+    workspace_root = pack_root.parent if pack_root is not None else None
+
+    local_candidates: list[Path] = []
+    if pack_root is not None:
+        local_candidates.append(
+            pack_root
+            / "repos"
+            / "IsaacLab-Arena"
+            / "submodules"
+            / "IsaacLab"
+            / "source"
+            / "isaaclab_assets"
+            / "data"
+            / "unitree_isaac"
+            / "usd"
+            / "g1_inspire_hand"
+            / "g1_inspire_hand.usd"
+        )
+    if workspace_root is not None:
+        local_candidates.append(
+            workspace_root
+            / "Dex_loco"
+            / "IsaacLab"
+            / "source"
+            / "isaaclab_assets"
+            / "data"
+            / "unitree_isaac"
+            / "usd"
+            / "g1_inspire_hand"
+            / "g1_inspire_hand.usd"
+        )
+        local_candidates.append(
+            workspace_root
+            / "IsaacLab"
+            / "source"
+            / "isaaclab_assets"
+            / "data"
+            / "unitree_isaac"
+            / "usd"
+            / "g1_inspire_hand"
+            / "g1_inspire_hand.usd"
+        )
+
+    for candidate in local_candidates:
+        if candidate.exists():
+            return str(candidate)
+
+    # Final fallback to Nucleus asset path.
+    return f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/G1/g1_29dof_inspire_hand.usd"
+
+
+_G1_INSPIRE_HAND_USD_PATH = _resolve_g1_inspire_hand_usd_path()
+_G1_USING_INSPIRE_HAND = "inspire" in _G1_INSPIRE_HAND_USD_PATH.lower()
+_G1_HEAD_CAMERA_PRIM_PATH = (
+    "{ENV_REGEX_NS}/Robot/torso_link/head_link/RobotHeadCam"
+    if _G1_USING_INSPIRE_HAND
+    else "{ENV_REGEX_NS}/Robot/head_link/RobotHeadCam"
+)
+if _G1_USING_INSPIRE_HAND:
+    _G1_HAND_INIT_STATE_JOINTS = {
+        ".*_thumb_.*": 0.0,
+        ".*_index_.*": 0.0,
+        ".*_middle_.*": 0.0,
+        ".*_ring_.*": 0.0,
+        ".*_pinky_.*": 0.0,
+    }
+    _G1_HAND_ACTUATOR_JOINT_NAMES_EXPR = [
+        ".*_index_.*",
+        ".*_middle_.*",
+        ".*_thumb_.*",
+        ".*_ring_.*",
+        ".*_pinky_.*",
+    ]
+else:
+    _G1_HAND_INIT_STATE_JOINTS = {
+        ".*_hand_.*": 0.0,
+    }
+    _G1_HAND_ACTUATOR_JOINT_NAMES_EXPR = [
+        ".*_hand_.*",
+    ]
 
 
 class G1EmbodimentBase(EmbodimentBase):
@@ -121,7 +219,7 @@ class G1SceneCfg:
     # Gear'WBC G1 config, used in WBC training
     robot: ArticulationCfg = ArticulationCfg(
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Samples/Groot/Robots/g1_29dof_with_hand_rev_1_0.usd",
+            usd_path=_G1_INSPIRE_HAND_USD_PATH,
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=False,
@@ -167,6 +265,7 @@ class G1SceneCfg:
                 "right_shoulder_roll_joint": 0,
                 "right_shoulder_yaw_joint": 0.0,
                 "right_elbow_joint": 0.0,
+                **_G1_HAND_INIT_STATE_JOINTS,
             },
             joint_vel={".*": 0.0},
         ),
@@ -300,9 +399,7 @@ class G1SceneCfg:
             ),
             # NOTE(peterd, 9/25/2025): The follow hand joint values are tested and working with Leapmotion and Mimic
             "hands": IdealPDActuatorCfg(
-                joint_names_expr=[
-                    ".*_hand_.*",
-                ],
+                joint_names_expr=_G1_HAND_ACTUATOR_JOINT_NAMES_EXPR,
                 effort_limit=5.0,
                 velocity_limit=10.0,
                 stiffness=4.0,
@@ -330,7 +427,7 @@ class G1CameraCfg:
         OffsetClass = CameraClass.OffsetCfg
 
         common_kwargs = dict(
-            prim_path="{ENV_REGEX_NS}/Robot/head_link/RobotHeadCam",
+            prim_path=_G1_HEAD_CAMERA_PRIM_PATH,
             update_period=0.0,
             height=480,
             width=640,

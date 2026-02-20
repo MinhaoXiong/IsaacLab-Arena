@@ -63,3 +63,7 @@ class ReplayActionPolicy(PolicyBase):
 
     def get_initial_state(self) -> torch.Tensor:
         return self.episode_data.get_initial_state()
+
+    def reset(self, env_ids: torch.Tensor | None = None) -> None:
+        # Replay policy is episode-index based; on env reset, rewind to the first action.
+        self.current_action_index = 0
