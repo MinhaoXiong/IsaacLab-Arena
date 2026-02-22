@@ -25,10 +25,6 @@ from isaaclab.managers.action_manager import ActionTermCfg
 from isaaclab.sensors import CameraCfg, TiledCameraCfg  # noqa: F401
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
-try:
-    from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
-except ImportError:  # Backward compatibility for older IsaacLab utility modules.
-    ISAAC_NUCLEUS_DIR = ISAACLAB_NUCLEUS_DIR.rsplit("/IsaacLab", 1)[0]
 
 import isaaclab_arena.terms.transforms as transforms_terms
 from isaaclab_arena.assets.register import register_asset
@@ -51,11 +47,6 @@ def _resolve_g1_inspire_hand_usd_path() -> str:
     env_override = os.environ.get("G1_INSPIRE_HAND_USD_PATH")
     if env_override:
         if "://" in env_override or os.path.exists(env_override):
-            if "g1_29dof_inspire_hand.usd" in env_override:
-                print(
-                    "[g1] WARNING: G1_INSPIRE_HAND_USD_PATH points to g1_29dof_inspire_hand.usd. "
-                    "This asset is fixed-base in recent IsaacLab assets and will break locomotion."
-                )
             return env_override
 
     # Locate Humanoid-gen-pack and workspace root from this file path.
@@ -69,9 +60,6 @@ def _resolve_g1_inspire_hand_usd_path() -> str:
 
     local_candidates: list[Path] = []
     if pack_root is not None:
-        local_candidates.append(
-            pack_root / "configs" / "g1_inspirehand" / "g1_29dof_with_inspire_hand.usd"
-        )
         local_candidates.append(
             pack_root
             / "repos"
@@ -87,19 +75,6 @@ def _resolve_g1_inspire_hand_usd_path() -> str:
             / "g1_inspire_hand.usd"
         )
     if workspace_root is not None:
-        local_candidates.append(
-            workspace_root
-            / "IsaacLab-Arena"
-            / "submodules"
-            / "IsaacLab"
-            / "source"
-            / "isaaclab_assets"
-            / "data"
-            / "unitree_isaac"
-            / "usd"
-            / "g1_inspire_hand"
-            / "g1_inspire_hand.usd"
-        )
         local_candidates.append(
             workspace_root
             / "Dex_loco"
@@ -128,23 +103,8 @@ def _resolve_g1_inspire_hand_usd_path() -> str:
         if candidate.exists():
             return str(candidate)
 
-    # The Nucleus inspire-hand USD is fixed-base in recent IsaacLab assets, which
-    # causes locomotion policy to output unstable leg motion while the base is pinned.
-    fixed_base_inspire_default = f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/G1/g1_29dof_inspire_hand.usd"
-    if os.environ.get("G1_ALLOW_FIXED_BASE_INSPIRE_USD", "").lower() in {"1", "true", "yes"}:
-        print(f"[g1] WARNING: Using fixed-base Inspire USD by override: {fixed_base_inspire_default}")
-        return fixed_base_inspire_default
-
-    mobile_fallback = f"{ISAAC_NUCLEUS_DIR}/Robots/Unitree/G1/g1.usd"
-    print(
-        "[g1] WARNING: Local mobile InspireHand USD not found. "
-        f"Falling back to mobile asset for locomotion: {mobile_fallback}"
-    )
-    print(
-        "[g1] INFO: Set G1_INSPIRE_HAND_USD_PATH=<your_mobile_inspire_usd> "
-        "to use InspireHand with locomotion."
-    )
-    return mobile_fallback
+    # Final fallback to Nucleus asset path.
+    return f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/G1/g1_29dof_inspire_hand.usd"
 
 
 _G1_INSPIRE_HAND_USD_PATH = _resolve_g1_inspire_hand_usd_path()
