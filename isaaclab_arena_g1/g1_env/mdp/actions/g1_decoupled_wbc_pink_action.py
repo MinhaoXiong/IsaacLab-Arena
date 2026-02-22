@@ -18,6 +18,8 @@ from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.g1_wbc_upperbody_ik.g
     G1WBCUpperbodyController,
 )
 from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constants import (
+    BASE_HEIGHT_CMD_END_IDX,
+    BASE_HEIGHT_CMD_START_IDX,
     LEFT_HAND_STATE_DIM,
     LEFT_HAND_STATE_IDX,
     LEFT_WRIST_LINK_NAME,
@@ -27,6 +29,8 @@ from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constan
     LEFT_WRIST_QUAT_DIM,
     LEFT_WRIST_QUAT_END_IDX,
     LEFT_WRIST_QUAT_START_IDX,
+    NAVIGATE_CMD_END_IDX,
+    NAVIGATE_CMD_START_IDX,
     NAVIGATE_THRESHOLD,
     RIGHT_FINGER_ANGLES_END_IDX,
     RIGHT_FINGER_ANGLES_START_IDX,
@@ -39,6 +43,8 @@ from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constan
     RIGHT_WRIST_QUAT_DIM,
     RIGHT_WRIST_QUAT_END_IDX,
     RIGHT_WRIST_QUAT_START_IDX,
+    TORSO_ORIENTATION_RPY_CMD_END_IDX,
+    TORSO_ORIENTATION_RPY_CMD_START_IDX,
 )
 from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.run_policy import postprocess_actions, prepare_observations
 from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.utils.p_controller import PController
@@ -165,6 +171,18 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
     @property
     def navigate_cmd(self):
         return self._navigate_cmd
+
+    def get_navigation_cmd_from_actions(self, actions: torch.Tensor):
+        """Get navigation command from fixed 23D WBC-PINK action layout."""
+        return actions[:, NAVIGATE_CMD_START_IDX:NAVIGATE_CMD_END_IDX]
+
+    def get_base_height_cmd_from_actions(self, actions: torch.Tensor):
+        """Get base height command from fixed 23D WBC-PINK action layout."""
+        return actions[:, BASE_HEIGHT_CMD_START_IDX:BASE_HEIGHT_CMD_END_IDX]
+
+    def get_torso_orientation_rpy_cmd_from_actions(self, actions: torch.Tensor):
+        """Get torso orientation command from fixed 23D WBC-PINK action layout."""
+        return actions[:, TORSO_ORIENTATION_RPY_CMD_START_IDX:TORSO_ORIENTATION_RPY_CMD_END_IDX]
 
     def compute_upperbody_joint_positions(
         self, body_data: dict[str, np.ndarray], left_hand_state: torch.Tensor, right_hand_state: torch.Tensor

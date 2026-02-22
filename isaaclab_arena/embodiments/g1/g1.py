@@ -35,6 +35,11 @@ from isaaclab_arena_g1.g1_env.mdp import g1_events as g1_events_mdp
 from isaaclab_arena_g1.g1_env.mdp import g1_observations as g1_observations_mdp
 from isaaclab_arena_g1.g1_env.mdp.actions.g1_decoupled_wbc_joint_action_cfg import G1DecoupledWBCJointActionCfg
 from isaaclab_arena_g1.g1_env.mdp.actions.g1_decoupled_wbc_pink_action_cfg import G1DecoupledWBCPinkActionCfg
+from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constants import (
+    BASE_HEIGHT_CMD_END_IDX,
+    NAVIGATE_CMD_START_IDX,
+    TORSO_ORIENTATION_RPY_CMD_END_IDX,
+)
 
 
 def _resolve_g1_inspire_hand_usd_path() -> str:
@@ -841,7 +846,11 @@ class G1MimicEnv(ManagerBasedRLMimicEnv):
             base_height_cmd shape: (1,)
             torso_orientation_rpy_cmd shape: (3,)
         """
-        return {"left": actions[:, 0], "right": actions[:, 1], "body": actions[:, -7:]}
+        return {
+            "left": actions[:, 0],
+            "right": actions[:, 1],
+            "body": actions[:, NAVIGATE_CMD_START_IDX:TORSO_ORIENTATION_RPY_CMD_END_IDX],
+        }
 
     def get_object_poses(self, env_ids: Sequence[int] | None = None):
         """
