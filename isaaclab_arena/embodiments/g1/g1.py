@@ -238,7 +238,11 @@ class G1SceneCfg:
                 solver_velocity_iteration_count=0,
             ),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-                enabled_self_collisions=False, solver_position_iteration_count=4, solver_velocity_iteration_count=0
+                enabled_self_collisions=False,
+                solver_position_iteration_count=4,
+                solver_velocity_iteration_count=0,
+                # Force floating-base behavior even if the source USD contains a fixed-root joint.
+                fix_root_link=False,
             ),
         ),
         prim_path="/World/envs/env_.*/Robot",
