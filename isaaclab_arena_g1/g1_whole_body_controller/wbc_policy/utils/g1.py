@@ -31,6 +31,30 @@ def _default_inspire_urdf_dir() -> str:
 _INSPIRE_HAND_URDF_DIR = _default_inspire_urdf_dir()
 
 
+def _parse_g1_hand_type_env(name: str, default: str = "inspire") -> str:
+    """Parse G1 hand type selector from env var."""
+    raw = os.environ.get(name, default).strip().lower()
+    if raw in {"inspire", "inspirehand", "inspire_hand"}:
+        return "inspire"
+    if raw in {"dex3", "dex3-1", "dex", "unitree_dex3", "default"}:
+        return "dex3"
+    print(f"[g1] Warning: invalid {name}={raw!r}, fallback to {default!r}.")
+    return default
+
+
+def _resolve_default_wbc_urdf():
+    robot_model_config = {
+        "asset_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/",
+        "urdf_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/g1_29dof_with_hand.urdf",
+    }
+    asset_path_local = retrieve_file_path(robot_model_config["asset_path"], force_download=True)
+    urdf_path_local = retrieve_file_path(robot_model_config["urdf_path"], force_download=True)
+    return asset_path_local, urdf_path_local
+
+
+_G1_HAND_TYPE = _parse_g1_hand_type_env("G1_HAND_TYPE", default="inspire")
+
+
 def instantiate_g1_robot_model(
     waist_location: Literal["lower_body", "upper_body"] = "lower_body",
 ):
@@ -47,20 +71,19 @@ def instantiate_g1_robot_model(
         RobotModel: Configured G1 robot model
     """
 
-    # Use local G1+InspireHand URDF if available, otherwise fall back to Nucleus
-    local_urdf = os.path.join(_INSPIRE_HAND_URDF_DIR, "g1_29dof_with_inspire_hand.urdf")
-    if os.path.isfile(local_urdf):
-        urdf_path_local = os.path.abspath(local_urdf)
-        asset_path_local = os.path.dirname(urdf_path_local)
-        print(f"[g1] Using local InspireHand URDF: {urdf_path_local}")
+    if _G1_HAND_TYPE == "inspire":
+        # Use local G1+InspireHand URDF if available, otherwise fall back to default WBC URDF.
+        local_urdf = os.path.join(_INSPIRE_HAND_URDF_DIR, "g1_29dof_with_inspire_hand.urdf")
+        if os.path.isfile(local_urdf):
+            urdf_path_local = os.path.abspath(local_urdf)
+            asset_path_local = os.path.dirname(urdf_path_local)
+            print(f"[g1] hand_type=inspire, local URDF: {urdf_path_local}")
+        else:
+            asset_path_local, urdf_path_local = _resolve_default_wbc_urdf()
+            print(f"[g1] hand_type=inspire, fallback Nucleus URDF: {urdf_path_local}")
     else:
-        robot_model_config = {
-            "asset_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/",
-            "urdf_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/g1_29dof_with_hand.urdf",
-        }
-        asset_path_local = retrieve_file_path(robot_model_config["asset_path"], force_download=True)
-        urdf_path_local = retrieve_file_path(robot_model_config["urdf_path"], force_download=True)
-        print(f"[g1] Using Nucleus URDF: {urdf_path_local}")
+        asset_path_local, urdf_path_local = _resolve_default_wbc_urdf()
+        print(f"[g1] hand_type=dex3, Nucleus URDF: {urdf_path_local}")
 
     assert waist_location in [
         "lower_body",

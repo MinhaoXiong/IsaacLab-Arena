@@ -24,7 +24,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers.action_manager import ActionTermCfg
 from isaaclab.sensors import CameraCfg, TiledCameraCfg  # noqa: F401
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
+from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, ISAAC_NUCLEUS_DIR
 
 import isaaclab_arena.terms.transforms as transforms_terms
 from isaaclab_arena.assets.register import register_asset
@@ -58,6 +58,25 @@ def _parse_optional_bool_env(name: str) -> bool | None:
         return False
     print(f"[g1] Warning: invalid {name}={raw!r}, expected boolean token; ignoring.")
     return None
+
+
+def _parse_g1_hand_type_env(name: str, default: str = "inspire") -> str:
+    """Parse G1 hand type selector from env var."""
+    raw = os.environ.get(name, default).strip().lower()
+    if raw in {"inspire", "inspirehand", "inspire_hand"}:
+        return "inspire"
+    if raw in {"dex3", "dex3-1", "dex", "unitree_dex3", "default"}:
+        return "dex3"
+    print(f"[g1] Warning: invalid {name}={raw!r}, fallback to {default!r}.")
+    return default
+
+
+def _resolve_g1_dex3_usd_path() -> str:
+    """Resolve G1 dex3 hand USD path (IsaacLab-Arena default behavior)."""
+    env_override = os.environ.get("G1_DEX3_USD_PATH")
+    if env_override and ("://" in env_override or os.path.exists(env_override)):
+        return env_override
+    return f"{ISAAC_NUCLEUS_DIR}/Samples/Groot/Robots/g1_29dof_with_hand_rev_1_0.usd"
 
 
 def _resolve_g1_inspire_hand_usd_path() -> str:
@@ -125,14 +144,16 @@ def _resolve_g1_inspire_hand_usd_path() -> str:
     return f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/G1/g1_29dof_inspire_hand.usd"
 
 
-_G1_INSPIRE_HAND_USD_PATH = _resolve_g1_inspire_hand_usd_path()
+_G1_HAND_TYPE = _parse_g1_hand_type_env("G1_HAND_TYPE", default="inspire")
+_G1_ROBOT_USD_PATH = _resolve_g1_inspire_hand_usd_path() if _G1_HAND_TYPE == "inspire" else _resolve_g1_dex3_usd_path()
 _G1_FIX_ROOT_LINK = _parse_optional_bool_env("G1_FIX_ROOT_LINK")
-_G1_USING_INSPIRE_HAND = "inspire" in _G1_INSPIRE_HAND_USD_PATH.lower()
+_G1_USING_INSPIRE_HAND = _G1_HAND_TYPE == "inspire"
 _G1_HEAD_CAMERA_PRIM_PATH = (
     "{ENV_REGEX_NS}/Robot/torso_link/head_link/RobotHeadCam"
     if _G1_USING_INSPIRE_HAND
     else "{ENV_REGEX_NS}/Robot/head_link/RobotHeadCam"
 )
+print(f"[g1] hand_type={_G1_HAND_TYPE}, robot_usd={_G1_ROBOT_USD_PATH}")
 if _G1_USING_INSPIRE_HAND:
     _G1_HAND_INIT_STATE_JOINTS = {
         ".*_thumb_.*": 0.0,
@@ -243,7 +264,7 @@ class G1SceneCfg:
     # Gear'WBC G1 config, used in WBC training
     robot: ArticulationCfg = ArticulationCfg(
         spawn=sim_utils.UsdFileCfg(
-            usd_path=_G1_INSPIRE_HAND_USD_PATH,
+            usd_path=_G1_ROBOT_USD_PATH,
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=False,
