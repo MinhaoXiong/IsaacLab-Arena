@@ -42,6 +42,24 @@ from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constan
 )
 
 
+def _parse_optional_bool_env(name: str) -> bool | None:
+    """Parse optional bool env var.
+
+    Returns:
+        - True/False when the env var is set to a known boolean token.
+        - None when unset or empty (keep asset default behavior).
+    """
+    raw = os.environ.get(name, "").strip().lower()
+    if raw == "":
+        return None
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    print(f"[g1] Warning: invalid {name}={raw!r}, expected boolean token; ignoring.")
+    return None
+
+
 def _resolve_g1_inspire_hand_usd_path() -> str:
     """Resolve G1 Inspire hand USD path with local-first fallback."""
     env_override = os.environ.get("G1_INSPIRE_HAND_USD_PATH")
@@ -108,6 +126,7 @@ def _resolve_g1_inspire_hand_usd_path() -> str:
 
 
 _G1_INSPIRE_HAND_USD_PATH = _resolve_g1_inspire_hand_usd_path()
+_G1_FIX_ROOT_LINK = _parse_optional_bool_env("G1_FIX_ROOT_LINK")
 _G1_USING_INSPIRE_HAND = "inspire" in _G1_INSPIRE_HAND_USD_PATH.lower()
 _G1_HEAD_CAMERA_PRIM_PATH = (
     "{ENV_REGEX_NS}/Robot/torso_link/head_link/RobotHeadCam"
@@ -241,6 +260,8 @@ class G1SceneCfg:
                 enabled_self_collisions=False,
                 solver_position_iteration_count=4,
                 solver_velocity_iteration_count=0,
+                # Keep USD default when env var is unset; allow pipeline to force mobile/fixed base.
+                fix_root_link=_G1_FIX_ROOT_LINK,
             ),
         ),
         prim_path="/World/envs/env_.*/Robot",
