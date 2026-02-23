@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+
 import numpy as np
 
 import pink
@@ -220,24 +222,47 @@ class G1WBCUpperbodyController:
 
         self.in_warmup = True
 
-    # BODex joint order -> URDF joint order mapping (12 DOF)
-    # BODex: [thumb_yaw, thumb_pitch, index, middle, ring, pinky,
-    #         thumb_inter, thumb_distal, index_inter, middle_inter, ring_inter, pinky_inter]
-    # URDF:  [index_prox, index_inter, middle_prox, middle_inter, pinky_prox, pinky_inter,
-    #         ring_prox, ring_inter, thumb_yaw, thumb_pitch, thumb_inter, thumb_distal]
+    # TWIST / URDF 12-DOF order:
+    # [index_prox, index_inter, middle_prox, middle_inter, pinky_prox, pinky_inter,
+    #  ring_prox, ring_inter, thumb_yaw, thumb_pitch, thumb_inter, thumb_distal]
+    _URDF_ORDER = [
+        "index_proximal_joint",
+        "index_intermediate_joint",
+        "middle_proximal_joint",
+        "middle_intermediate_joint",
+        "pinky_proximal_joint",
+        "pinky_intermediate_joint",
+        "ring_proximal_joint",
+        "ring_intermediate_joint",
+        "thumb_proximal_yaw_joint",
+        "thumb_proximal_pitch_joint",
+        "thumb_intermediate_joint",
+        "thumb_distal_joint",
+    ]
+
+    # BODex 12-DOF order:
+    # [thumb_yaw, thumb_pitch, index, middle, ring, pinky,
+    #  thumb_inter, thumb_distal, index_inter, middle_inter, ring_inter, pinky_inter]
+    # Mapping from BODex order -> TWIST/URDF order.
     _BODEX_TO_URDF = [2, 8, 3, 9, 5, 11, 4, 10, 0, 1, 6, 7]
 
     def get_hand_joint_pos(self, hand_state):
-        """Map hand state to 12 InspireHand joint angles in URDF order.
+        """Map hand state to 12 InspireHand joint angles in URDF/TWIST order.
 
-        hand_state: scalar 0=open, 1=close, or np.ndarray of 12 joint angles (BODex order).
+        hand_state: scalar 0=open, 1=close, or np.ndarray of 12 joint angles.
+        Environment variable `G1_INSPIRE_HAND_12DOF_ORDER` controls array order:
+        - `urdf` / `twist` (default): no reorder
+        - `bodex`: reorder from BODex to URDF/TWIST
         """
         if isinstance(hand_state, np.ndarray) and hand_state.size == 12:
-            # Reorder from BODex order to URDF order
-            return hand_state[self._BODEX_TO_URDF].copy()
+            order = os.environ.get("G1_INSPIRE_HAND_12DOF_ORDER", "urdf").strip().lower()
+            if order in {"bodex"}:
+                return hand_state[self._BODEX_TO_URDF].copy()
+            # Default follows TWIST/URDF order.
+            return hand_state.copy()
 
-        # URDF order: index, index_i, middle, middle_i, pinky, pinky_i,
-        #             ring, ring_i, thumb_yaw, thumb_pitch, thumb_i, thumb_d
+        # URDF/TWIST order: index, index_i, middle, middle_i, pinky, pinky_i,
+        #                   ring, ring_i, thumb_yaw, thumb_pitch, thumb_i, thumb_d
         hand_q = np.zeros(12)
         if hand_state == 0:
             return hand_q

@@ -18,10 +18,17 @@ from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.g1_wbc_upperbody_ik.g
     G1WBCUpperbodyController,
 )
 from isaaclab_arena_g1.g1_whole_body_controller.wbc_policy.policy.action_constants import (
+    ACTION_DIM_WITH_BILATERAL_FINGERS,
+    ACTION_DIM_WITH_RIGHT_FINGERS,
+    BASE_ACTION_DIM,
     BASE_HEIGHT_CMD_END_IDX,
     BASE_HEIGHT_CMD_START_IDX,
+    BILATERAL_RIGHT_FINGER_ANGLES_END_IDX,
+    BILATERAL_RIGHT_FINGER_ANGLES_START_IDX,
     LEFT_HAND_STATE_DIM,
     LEFT_HAND_STATE_IDX,
+    LEFT_FINGER_ANGLES_END_IDX,
+    LEFT_FINGER_ANGLES_START_IDX,
     LEFT_WRIST_LINK_NAME,
     LEFT_WRIST_POS_DIM,
     LEFT_WRIST_POS_END_IDX,
@@ -185,7 +192,10 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         return actions[:, TORSO_ORIENTATION_RPY_CMD_START_IDX:TORSO_ORIENTATION_RPY_CMD_END_IDX]
 
     def compute_upperbody_joint_positions(
-        self, body_data: dict[str, np.ndarray], left_hand_state: torch.Tensor, right_hand_state: torch.Tensor
+        self,
+        body_data: dict[str, np.ndarray],
+        left_hand_state: np.ndarray | torch.Tensor,
+        right_hand_state: np.ndarray | torch.Tensor,
     ) -> np.ndarray:
         """Run the PINK IK controller to compute the target joint positions for the upper body."""
         if self.upperbody_controller.in_warmup:
@@ -199,6 +209,40 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
                 body_data, left_hand_state, right_hand_state
             )
         return target_robot_joints
+
+    def _extract_hand_states_from_actions(
+        self, actions: torch.Tensor
+    ) -> tuple[np.ndarray | torch.Tensor, np.ndarray | torch.Tensor]:
+        """Extract hand commands from actions with backward-compatible layouts.
+
+        Supported layouts:
+        - 23D base action: scalar left/right hand states
+        - 35D action: base 23D + right hand 12DOF (legacy)
+        - 47D action: base 23D + left hand 12DOF + right hand 12DOF (TWIST style)
+        """
+        action_dim = int(actions.shape[-1])
+
+        left_hand_state = actions[:, LEFT_HAND_STATE_IDX].squeeze(0).cpu()
+        right_hand_state = actions[:, RIGHT_HAND_STATE_IDX].squeeze(0).cpu()
+
+        if action_dim >= ACTION_DIM_WITH_BILATERAL_FINGERS:
+            left_hand_state = (
+                actions[:, LEFT_FINGER_ANGLES_START_IDX:LEFT_FINGER_ANGLES_END_IDX].squeeze(0).cpu().numpy()
+            )
+            right_hand_state = (
+                actions[:, BILATERAL_RIGHT_FINGER_ANGLES_START_IDX:BILATERAL_RIGHT_FINGER_ANGLES_END_IDX]
+                .squeeze(0)
+                .cpu()
+                .numpy()
+            )
+        elif action_dim >= ACTION_DIM_WITH_RIGHT_FINGERS:
+            right_hand_state = (
+                actions[:, RIGHT_FINGER_ANGLES_START_IDX:RIGHT_FINGER_ANGLES_END_IDX].squeeze(0).cpu().numpy()
+            )
+        else:
+            assert action_dim >= BASE_ACTION_DIM, f"Invalid WBC-PINK action dim: {action_dim}"
+
+        return left_hand_state, right_hand_state
 
     # """
     # Operations.
@@ -253,13 +297,8 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         right_arm_pose[:3, :3] = right_rotmat
         right_arm_pose[:3, 3] = right_arm_pos
 
-        # Extract left/right hand state from actions
-        left_hand_state = actions_clone[:, LEFT_HAND_STATE_IDX].squeeze(0).cpu()
-        # If action has InspireHand finger angles appended (dim > 23), use them directly
-        if actions_clone.shape[-1] >= RIGHT_FINGER_ANGLES_END_IDX:
-            right_hand_state = actions_clone[:, RIGHT_FINGER_ANGLES_START_IDX:RIGHT_FINGER_ANGLES_END_IDX].squeeze(0).cpu().numpy()
-        else:
-            right_hand_state = actions_clone[:, RIGHT_HAND_STATE_IDX].squeeze(0).cpu()
+        # Extract left/right hand state from actions.
+        left_hand_state, right_hand_state = self._extract_hand_states_from_actions(actions_clone)
 
         # Assemble data format for running IK
         body_data = {LEFT_WRIST_LINK_NAME: left_arm_pose, RIGHT_WRIST_LINK_NAME: right_arm_pose}

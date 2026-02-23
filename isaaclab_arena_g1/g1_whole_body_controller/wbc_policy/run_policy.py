@@ -18,6 +18,12 @@ _LEGACY_HAND_TO_INSPIRE_HAND = {
         "L_ring_intermediate_joint",
         "L_pinky_intermediate_joint",
     ],
+    "left_hand_ring_0_joint": ["L_ring_proximal_joint"],
+    "left_hand_ring_1_joint": ["L_ring_intermediate_joint"],
+    "left_hand_pinky_0_joint": ["L_pinky_proximal_joint"],
+    "left_hand_pinky_1_joint": ["L_pinky_intermediate_joint"],
+    "left_hand_little_0_joint": ["L_pinky_proximal_joint"],
+    "left_hand_little_1_joint": ["L_pinky_intermediate_joint"],
     "left_hand_thumb_0_joint": ["L_thumb_proximal_yaw_joint"],
     "left_hand_thumb_1_joint": ["L_thumb_proximal_pitch_joint"],
     "left_hand_thumb_2_joint": ["L_thumb_intermediate_joint", "L_thumb_distal_joint"],
@@ -29,36 +35,54 @@ _LEGACY_HAND_TO_INSPIRE_HAND = {
         "R_ring_intermediate_joint",
         "R_pinky_intermediate_joint",
     ],
+    "right_hand_ring_0_joint": ["R_ring_proximal_joint"],
+    "right_hand_ring_1_joint": ["R_ring_intermediate_joint"],
+    "right_hand_pinky_0_joint": ["R_pinky_proximal_joint"],
+    "right_hand_pinky_1_joint": ["R_pinky_intermediate_joint"],
+    "right_hand_little_0_joint": ["R_pinky_proximal_joint"],
+    "right_hand_little_1_joint": ["R_pinky_intermediate_joint"],
     "right_hand_thumb_0_joint": ["R_thumb_proximal_yaw_joint"],
     "right_hand_thumb_1_joint": ["R_thumb_proximal_pitch_joint"],
     "right_hand_thumb_2_joint": ["R_thumb_intermediate_joint", "R_thumb_distal_joint"],
 }
 
-_INSPIRE_HAND_TO_LEGACY_HAND = {
-    "L_index_proximal_joint": "left_hand_index_0_joint",
-    "L_index_intermediate_joint": "left_hand_index_1_joint",
-    "L_middle_proximal_joint": "left_hand_middle_0_joint",
-    "L_middle_intermediate_joint": "left_hand_middle_1_joint",
-    "L_ring_proximal_joint": "left_hand_middle_0_joint",
-    "L_ring_intermediate_joint": "left_hand_middle_1_joint",
-    "L_pinky_proximal_joint": "left_hand_middle_0_joint",
-    "L_pinky_intermediate_joint": "left_hand_middle_1_joint",
-    "L_thumb_proximal_yaw_joint": "left_hand_thumb_0_joint",
-    "L_thumb_proximal_pitch_joint": "left_hand_thumb_1_joint",
-    "L_thumb_intermediate_joint": "left_hand_thumb_2_joint",
-    "L_thumb_distal_joint": "left_hand_thumb_2_joint",
-    "R_index_proximal_joint": "right_hand_index_0_joint",
-    "R_index_intermediate_joint": "right_hand_index_1_joint",
-    "R_middle_proximal_joint": "right_hand_middle_0_joint",
-    "R_middle_intermediate_joint": "right_hand_middle_1_joint",
-    "R_ring_proximal_joint": "right_hand_middle_0_joint",
-    "R_ring_intermediate_joint": "right_hand_middle_1_joint",
-    "R_pinky_proximal_joint": "right_hand_middle_0_joint",
-    "R_pinky_intermediate_joint": "right_hand_middle_1_joint",
-    "R_thumb_proximal_yaw_joint": "right_hand_thumb_0_joint",
-    "R_thumb_proximal_pitch_joint": "right_hand_thumb_1_joint",
-    "R_thumb_intermediate_joint": "right_hand_thumb_2_joint",
-    "R_thumb_distal_joint": "right_hand_thumb_2_joint",
+_INSPIRE_HAND_TO_LEGACY_HAND_CANDIDATES = {
+    "L_index_proximal_joint": ["left_hand_index_0_joint"],
+    "L_index_intermediate_joint": ["left_hand_index_1_joint"],
+    "L_middle_proximal_joint": ["left_hand_middle_0_joint"],
+    "L_middle_intermediate_joint": ["left_hand_middle_1_joint"],
+    "L_ring_proximal_joint": ["left_hand_ring_0_joint", "left_hand_middle_0_joint"],
+    "L_ring_intermediate_joint": ["left_hand_ring_1_joint", "left_hand_middle_1_joint"],
+    "L_pinky_proximal_joint": ["left_hand_pinky_0_joint", "left_hand_little_0_joint", "left_hand_middle_0_joint"],
+    "L_pinky_intermediate_joint": [
+        "left_hand_pinky_1_joint",
+        "left_hand_little_1_joint",
+        "left_hand_middle_1_joint",
+    ],
+    "L_thumb_proximal_yaw_joint": ["left_hand_thumb_0_joint"],
+    "L_thumb_proximal_pitch_joint": ["left_hand_thumb_1_joint"],
+    "L_thumb_intermediate_joint": ["left_hand_thumb_2_joint"],
+    "L_thumb_distal_joint": ["left_hand_thumb_2_joint"],
+    "R_index_proximal_joint": ["right_hand_index_0_joint"],
+    "R_index_intermediate_joint": ["right_hand_index_1_joint"],
+    "R_middle_proximal_joint": ["right_hand_middle_0_joint"],
+    "R_middle_intermediate_joint": ["right_hand_middle_1_joint"],
+    "R_ring_proximal_joint": ["right_hand_ring_0_joint", "right_hand_middle_0_joint"],
+    "R_ring_intermediate_joint": ["right_hand_ring_1_joint", "right_hand_middle_1_joint"],
+    "R_pinky_proximal_joint": [
+        "right_hand_pinky_0_joint",
+        "right_hand_little_0_joint",
+        "right_hand_middle_0_joint",
+    ],
+    "R_pinky_intermediate_joint": [
+        "right_hand_pinky_1_joint",
+        "right_hand_little_1_joint",
+        "right_hand_middle_1_joint",
+    ],
+    "R_thumb_proximal_yaw_joint": ["right_hand_thumb_0_joint"],
+    "R_thumb_proximal_pitch_joint": ["right_hand_thumb_1_joint"],
+    "R_thumb_intermediate_joint": ["right_hand_thumb_2_joint"],
+    "R_thumb_distal_joint": ["right_hand_thumb_2_joint"],
 }
 
 _WARNED_KEYS = set()
@@ -76,6 +100,15 @@ def _resolve_sim_joint_to_wbc_joint_names(sim_joint_name: str, wbc_joints_order:
     if sim_joint_name in _LEGACY_HAND_TO_INSPIRE_HAND:
         return [name for name in _LEGACY_HAND_TO_INSPIRE_HAND[sim_joint_name] if name in wbc_joints_order]
     return []
+
+
+def _resolve_wbc_joint_to_sim_joint_name(wbc_joint_name: str, sim_joint_name_to_index: dict[str, int]) -> str:
+    if wbc_joint_name in sim_joint_name_to_index:
+        return wbc_joint_name
+    for candidate in _INSPIRE_HAND_TO_LEGACY_HAND_CANDIDATES.get(wbc_joint_name, []):
+        if candidate in sim_joint_name_to_index:
+            return candidate
+    return ""
 
 
 def convert_sim_joint_to_wbc_joint(
@@ -214,9 +247,7 @@ def postprocess_actions(
     missing_wbc_joint_names = []
 
     for wbc_joint_name, wbc_joint_index in wbc_g1_joints_order.items():
-        sim_joint_name = wbc_joint_name
-        if sim_joint_name not in sim_joint_name_to_index:
-            sim_joint_name = _INSPIRE_HAND_TO_LEGACY_HAND.get(wbc_joint_name, "")
+        sim_joint_name = _resolve_wbc_joint_to_sim_joint_name(wbc_joint_name, sim_joint_name_to_index)
         if sim_joint_name not in sim_joint_name_to_index:
             missing_wbc_joint_names.append(wbc_joint_name)
             continue
