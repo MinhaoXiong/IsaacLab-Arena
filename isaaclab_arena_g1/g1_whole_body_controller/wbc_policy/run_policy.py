@@ -245,8 +245,13 @@ def postprocess_actions(
     accum = torch.zeros_like(processed_actions)
     accum_count = torch.zeros((num_joints,), device=device, dtype=processed_actions.dtype)
     missing_wbc_joint_names = []
+    out_of_range_wbc_joint_names = []
+    policy_action_dim = int(wbc_joints_pos_action.shape[1])
 
     for wbc_joint_name, wbc_joint_index in wbc_g1_joints_order.items():
+        if int(wbc_joint_index) >= policy_action_dim:
+            out_of_range_wbc_joint_names.append(wbc_joint_name)
+            continue
         sim_joint_name = _resolve_wbc_joint_to_sim_joint_name(wbc_joint_name, sim_joint_name_to_index)
         if sim_joint_name not in sim_joint_name_to_index:
             missing_wbc_joint_names.append(wbc_joint_name)
@@ -259,6 +264,12 @@ def postprocess_actions(
         _warn_once(
             "missing_wbc_action_joints",
             f"[run_policy] Skipped unmapped WBC action joints: {missing_wbc_joint_names}",
+        )
+    if out_of_range_wbc_joint_names:
+        _warn_once(
+            "out_of_range_wbc_action_joints",
+            "[run_policy] Skipped WBC joints with index >= policy action dim "
+            f"({policy_action_dim}): {out_of_range_wbc_joint_names}",
         )
 
     valid_mask = accum_count > 0

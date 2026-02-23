@@ -1,0 +1,58 @@
+# Copyright (c) 2025, The Isaac Lab Arena Project Developers (https://github.com/isaac-sim/IsaacLab-Arena/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+'left_hip_pitch_joint': 0
+'left_hip_roll_joint': 1
+'left_hip_yaw_joint': 2
+'left_knee_joint': 3
+'left_ankle_pitch_joint': 4
+'left_ankle_roll_joint': 5
+'right_hip_pitch_joint': 6
+'right_hip_roll_joint': 7
+'right_hip_yaw_joint': 8
+'right_knee_joint': 9
+'right_ankle_pitch_joint': 10
+'right_ankle_roll_joint': 11
+'waist_yaw_joint': 12
+'waist_roll_joint': 13
+'waist_pitch_joint': 14
+'left_shoulder_pitch_joint': 15
+'left_shoulder_roll_joint': 16
+'left_shoulder_yaw_joint': 17
+'left_elbow_joint': 18
+'left_wrist_roll_joint': 19
+'left_wrist_pitch_joint': 20
+'left_wrist_yaw_joint': 21
+'L_index_proximal_joint': 22
+'L_index_intermediate_joint': 23
+'L_middle_proximal_joint': 24
+'L_middle_intermediate_joint': 25
+'L_pinky_proximal_joint': 26
+'L_pinky_intermediate_joint': 27
+'L_ring_proximal_joint': 28
+'L_ring_intermediate_joint': 29
+'L_thumb_proximal_yaw_joint': 30
+'L_thumb_proximal_pitch_joint': 31
+'L_thumb_intermediate_joint': 32
+'L_thumb_distal_joint': 33
+'right_shoulder_pitch_joint': 34
+'right_shoulder_roll_joint': 35
+'right_shoulder_yaw_joint': 36
+'right_elbow_joint': 37
+'right_wrist_roll_joint': 38
+'right_wrist_pitch_joint': 39
+'right_wrist_yaw_joint': 40
+'R_index_proximal_joint': 41
+'R_index_intermediate_joint': 42
+'R_middle_proximal_joint': 43
+'R_middle_intermediate_joint': 44
+'R_pinky_proximal_joint': 45
+'R_pinky_intermediate_joint': 46
+'R_ring_proximal_joint': 47
+'R_ring_intermediate_joint': 48
+'R_thumb_proximal_yaw_joint': 49
+'R_thumb_proximal_pitch_joint': 50
+'R_thumb_intermediate_joint': 51
+'R_thumb_distal_joint': 52

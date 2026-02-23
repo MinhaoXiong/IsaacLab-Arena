@@ -221,6 +221,11 @@ class G1WBCUpperbodyController:
         self.body_ik_solver.register_robot(self.body)
 
         self.in_warmup = True
+        self._hand_type = os.environ.get("G1_HAND_TYPE", "inspire").strip().lower()
+        if self._hand_type in {"dex3-1", "dex", "unitree_dex3", "default"}:
+            self._hand_type = "dex3"
+        if self._hand_type not in {"dex3", "inspire"}:
+            self._hand_type = "inspire"
 
     # TWIST / URDF 12-DOF order:
     # [index_prox, index_inter, middle_prox, middle_inter, pinky_prox, pinky_inter,
@@ -246,14 +251,27 @@ class G1WBCUpperbodyController:
     # Mapping from BODex order -> TWIST/URDF order.
     _BODEX_TO_URDF = [2, 8, 3, 9, 5, 11, 4, 10, 0, 1, 6, 7]
 
-    def get_hand_joint_pos(self, hand_state):
-        """Map hand state to 12 InspireHand joint angles in URDF/TWIST order.
-
-        hand_state: scalar 0=open, 1=close, or np.ndarray of 12 joint angles.
-        Environment variable `G1_INSPIRE_HAND_12DOF_ORDER` controls array order:
-        - `urdf` / `twist` (default): no reorder
-        - `bodex`: reorder from BODex to URDF/TWIST
-        """
+    def get_hand_joint_pos(self, hand_state, side: str = "left"):
+        """Map hand state to target hand joint angles for the selected hand backend."""
+        if self._hand_type == "dex3":
+            # Legacy Unitree Dex3 hand has 7 controllable joints per side.
+            hand_q_desired = np.deg2rad([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            if isinstance(hand_state, np.ndarray) and hand_state.size == 7:
+                hand_q_desired = hand_state.copy()
+            elif hand_state != 0:
+                amp = 0.7
+                hand_q_desired[1] += amp
+                hand_q_desired[2] += amp
+                ampA = 0.6
+                ampB = 1.2
+                hand_q_desired[3] -= ampA
+                hand_q_desired[4] -= ampB
+                hand_q_desired[5] -= ampA
+                hand_q_desired[6] -= ampB
+            # Keep historical sign convention for right dex3 hand.
+            if side == "right":
+                hand_q_desired = -hand_q_desired
+            return hand_q_desired
         if isinstance(hand_state, np.ndarray) and hand_state.size == 12:
             order = os.environ.get("G1_INSPIRE_HAND_12DOF_ORDER", "urdf").strip().lower()
             if order in {"bodex"}:
@@ -305,8 +323,8 @@ class G1WBCUpperbodyController:
         else:
             body_q = self.body_ik_solver(body_target_pose)
 
-        left_hand_joint_pos = self.get_hand_joint_pos(left_hand_state)
-        right_hand_joint_pos = self.get_hand_joint_pos(right_hand_state)
+        left_hand_joint_pos = self.get_hand_joint_pos(left_hand_state, side="left")
+        right_hand_joint_pos = self.get_hand_joint_pos(right_hand_state, side="right")
 
         body_q[self.full_robot.get_hand_actuated_joint_indices(side="left")] = left_hand_joint_pos
         body_q[self.full_robot.get_hand_actuated_joint_indices(side="right")] = right_hand_joint_pos

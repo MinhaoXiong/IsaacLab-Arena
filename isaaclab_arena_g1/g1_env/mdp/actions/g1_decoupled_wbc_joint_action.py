@@ -88,9 +88,16 @@ class G1DecoupledWBCJointAction(ActionTerm):
             # roll pitch yaw command
             "torso_orientation_rpy_cmd": np.tile(np.array([[0.0, 0.0, 0.0]]), (self.num_envs, 1)),
         }
+        hand_type = os.environ.get("G1_HAND_TYPE", "inspire").strip().lower()
+        if hand_type in {"dex3-1", "dex", "unitree_dex3", "default"}:
+            hand_type = "dex3"
+        if hand_type == "inspire":
+            joints_order_file = "loco_manip_g1_joints_order_53dof_inspire.yaml"
+        else:
+            joints_order_file = "loco_manip_g1_joints_order_43dof.yaml"
         wbc_g1_joints_order_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "config/loco_manip_g1_joints_order_43dof.yaml",
+            f"config/{joints_order_file}",
         )
         try:
             with open(wbc_g1_joints_order_path) as f:
