@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import re
+import tempfile
 from typing import Literal
 
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, retrieve_file_path
@@ -42,14 +44,53 @@ def _parse_g1_hand_type_env(name: str, default: str = "inspire") -> str:
     return default
 
 
+_WBC_G1_NUCLEUS_ROOT = f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1"
+_WBC_G1_NUCLEUS_URDF = f"{_WBC_G1_NUCLEUS_ROOT}/g1_29dof_with_hand.urdf"
+_MESH_FILENAME_PATTERN = re.compile(r'filename="([^"]+)"')
+
+
+def _is_uri_or_abs_path(path: str) -> bool:
+    path = path.strip()
+    return (
+        os.path.isabs(path)
+        or "://" in path
+        or path.startswith("package://")
+        or path.startswith("file://")
+    )
+
+
 def _resolve_default_wbc_urdf():
-    robot_model_config = {
-        "asset_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/",
-        "urdf_path": f"{ISAACLAB_NUCLEUS_DIR}/Arena/wbc_policy/robot_model/g1/g1_29dof_with_hand.urdf",
-    }
-    asset_path_local = retrieve_file_path(robot_model_config["asset_path"], force_download=True)
-    urdf_path_local = retrieve_file_path(robot_model_config["urdf_path"], force_download=True)
-    return asset_path_local, urdf_path_local
+    """Download dex3 URDF from Nucleus and localize all relative mesh paths."""
+    cache_root = os.path.join(tempfile.gettempdir(), "isaaclab_arena_g1_dex3")
+    os.makedirs(cache_root, exist_ok=True)
+
+    urdf_path_local = retrieve_file_path(_WBC_G1_NUCLEUS_URDF, download_dir=cache_root, force_download=True)
+    with open(urdf_path_local, encoding="utf-8") as f:
+        urdf_text = f.read()
+
+    localized_meshes: dict[str, str] = {}
+    for mesh_name in set(_MESH_FILENAME_PATTERN.findall(urdf_text)):
+        if _is_uri_or_abs_path(mesh_name):
+            continue
+        rel_mesh = mesh_name.lstrip("./")
+        mesh_nucleus_path = f"{_WBC_G1_NUCLEUS_ROOT}/{rel_mesh}"
+        mesh_download_dir = os.path.join(cache_root, os.path.dirname(rel_mesh))
+        os.makedirs(mesh_download_dir, exist_ok=True)
+        mesh_local_path = retrieve_file_path(mesh_nucleus_path, download_dir=mesh_download_dir, force_download=False)
+        localized_meshes[mesh_name] = os.path.abspath(mesh_local_path).replace("\\", "/")
+
+    def _replace_mesh_filename(match: re.Match[str]) -> str:
+        original = match.group(1)
+        localized = localized_meshes.get(original)
+        if localized is None:
+            return match.group(0)
+        return f'filename="{localized}"'
+
+    localized_urdf_path = os.path.join(cache_root, "g1_29dof_with_hand.localized.urdf")
+    localized_urdf_text = _MESH_FILENAME_PATTERN.sub(_replace_mesh_filename, urdf_text)
+    with open(localized_urdf_path, "w", encoding="utf-8") as f:
+        f.write(localized_urdf_text)
+    return cache_root, localized_urdf_path
 
 
 _G1_HAND_TYPE = _parse_g1_hand_type_env("G1_HAND_TYPE", default="inspire")
