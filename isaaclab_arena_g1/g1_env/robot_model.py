@@ -28,6 +28,7 @@ class RobotModel:
         )
 
         self.is_floating_base_model = set_floating_base
+        self.initial_body_pose = None
 
         joints_order_path = os.path.join(os.path.dirname(__file__), "config/loco_manip_g1_joints_order_43dof.yaml")
 

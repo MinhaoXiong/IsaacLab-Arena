@@ -276,10 +276,14 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
                 return float(default)
 
         # Straight hanging arm defaults. Can be tuned via env without code change.
+        # NOTE:
+        # - For G1, elbow ~= 1.2-1.35 rad is closer to a visual hanging arm than elbow=0.
+        # - Right shoulder roll is mirrored by default (negative of left).
         shoulder_pitch = _env_float("G1_NAV_STRAIGHT_ARM_SHOULDER_PITCH", 0.0)
-        shoulder_roll = _env_float("G1_NAV_STRAIGHT_ARM_SHOULDER_ROLL", 0.0)
+        shoulder_roll_left = _env_float("G1_NAV_STRAIGHT_ARM_SHOULDER_ROLL", 0.0)
+        shoulder_roll_right = _env_float("G1_NAV_STRAIGHT_ARM_SHOULDER_ROLL_RIGHT", -shoulder_roll_left)
         shoulder_yaw = _env_float("G1_NAV_STRAIGHT_ARM_SHOULDER_YAW", 0.0)
-        elbow = _env_float("G1_NAV_STRAIGHT_ARM_ELBOW", 0.0)
+        elbow = _env_float("G1_NAV_STRAIGHT_ARM_ELBOW", 1.25)
         wrist_roll = _env_float("G1_NAV_STRAIGHT_ARM_WRIST_ROLL", 0.0)
         wrist_pitch = _env_float("G1_NAV_STRAIGHT_ARM_WRIST_PITCH", 0.0)
         wrist_yaw = _env_float("G1_NAV_STRAIGHT_ARM_WRIST_YAW", 0.0)
@@ -290,7 +294,7 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
                 targets[idx] = float(value)
 
         _set_if_present("left_shoulder_pitch_joint", shoulder_pitch)
-        _set_if_present("left_shoulder_roll_joint", shoulder_roll)
+        _set_if_present("left_shoulder_roll_joint", shoulder_roll_left)
         _set_if_present("left_shoulder_yaw_joint", shoulder_yaw)
         _set_if_present("left_elbow_joint", elbow)
         _set_if_present("left_wrist_roll_joint", wrist_roll)
@@ -298,7 +302,7 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         _set_if_present("left_wrist_yaw_joint", wrist_yaw)
 
         _set_if_present("right_shoulder_pitch_joint", shoulder_pitch)
-        _set_if_present("right_shoulder_roll_joint", shoulder_roll)
+        _set_if_present("right_shoulder_roll_joint", shoulder_roll_right)
         _set_if_present("right_shoulder_yaw_joint", shoulder_yaw)
         _set_if_present("right_elbow_joint", elbow)
         _set_if_present("right_wrist_roll_joint", wrist_roll)
