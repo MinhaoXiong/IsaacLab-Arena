@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 from isaaclab_arena.affordances.openable import Openable
@@ -36,6 +38,44 @@ class LibraryObject(Object):
             initial_pose=initial_pose,
             **kwargs,
         )
+
+
+def _acquire_lightwheel_usd_or_fallback(
+    *,
+    registry_type: str,
+    file_name: str | None = None,
+    registry_name: list[str] | None = None,
+    fallback_env_var: str,
+    asset_label: str,
+) -> tuple[str, str, dict]:
+    """Best-effort Lightwheel acquire with offline fallback.
+
+    We intentionally avoid raising at import time so scenes that do not use
+    these assets can still run when Lightwheel is temporarily unavailable.
+    """
+    try:
+        from lightwheel_sdk.loader import object_loader
+
+        kwargs: dict = {"registry_type": registry_type, "file_type": "USD"}
+        if file_name is not None:
+            kwargs["file_name"] = file_name
+        if registry_name is not None:
+            kwargs["registry_name"] = registry_name
+        file_path, object_name, metadata = object_loader.acquire_by_registry(**kwargs)
+        return str(file_path), str(object_name), dict(metadata)
+    except Exception as exc:  # pragma: no cover - runtime/network dependent
+        fallback = os.environ.get(fallback_env_var, "").strip()
+        if fallback:
+            print(
+                f"[asset][lightwheel] {asset_label} acquire failed "
+                f"({type(exc).__name__}: {exc}); using fallback USD from {fallback_env_var}: {fallback}"
+            )
+            return fallback, asset_label, {"fallback_env_var": fallback_env_var, "lightwheel_error": f"{type(exc).__name__}: {exc}"}
+        print(
+            f"[asset][lightwheel] {asset_label} acquire failed "
+            f"({type(exc).__name__}: {exc}); set {fallback_env_var} to a local USD path if this asset is needed."
+        )
+        return "", asset_label, {"fallback_env_var": fallback_env_var, "lightwheel_error": f"{type(exc).__name__}: {exc}"}
 
 
 # TODO(peterd, 2025.11.05): Update all OV drive paths to use {ISAACLAB_NUCLEUS_DIR}
@@ -114,13 +154,13 @@ class PowerDrill(LibraryObject):
 class Microwave(LibraryObject, Openable):
     """A microwave oven."""
 
-    # Only required when using Lightwheel SDK
-    from lightwheel_sdk.loader import object_loader
-
     name = "microwave"
     tags = ["object", "openable"]
-    file_path, object_name, metadata = object_loader.acquire_by_registry(
-        registry_type="fixtures", file_name="Microwave039", file_type="USD"
+    file_path, object_name, metadata = _acquire_lightwheel_usd_or_fallback(
+        registry_type="fixtures",
+        file_name="Microwave039",
+        fallback_env_var="ISAACLAB_ARENA_MICROWAVE_USD_PATH",
+        asset_label="Microwave039",
     )
     usd_path = file_path
     object_type = ObjectType.ARTICULATION
@@ -130,6 +170,11 @@ class Microwave(LibraryObject, Openable):
     openable_open_threshold = 0.5
 
     def __init__(self, prim_path: str | None = None, initial_pose: Pose | None = None):
+        if not self.usd_path:
+            raise RuntimeError(
+                "Microwave asset USD path is empty. "
+                "Set ISAACLAB_ARENA_MICROWAVE_USD_PATH to a valid USD path or restore Lightwheel connectivity."
+            )
         super().__init__(
             prim_path=prim_path,
             initial_pose=initial_pose,
@@ -144,13 +189,13 @@ class CoffeeMachine(LibraryObject, Pressable):
     Encapsulates the pick-up object config for a pick-and-place environment.
     """
 
-    # Only required when using Lightwheel SDK
-    from lightwheel_sdk.loader import object_loader
-
     name = "coffee_machine"
     tags = ["object", "pressable"]
-    file_path, object_name, metadata = object_loader.acquire_by_registry(
-        registry_type="fixtures", registry_name=["coffee_machine"], file_type="USD"
+    file_path, object_name, metadata = _acquire_lightwheel_usd_or_fallback(
+        registry_type="fixtures",
+        registry_name=["coffee_machine"],
+        fallback_env_var="ISAACLAB_ARENA_COFFEE_MACHINE_USD_PATH",
+        asset_label="coffee_machine",
     )
     usd_path = file_path
     object_type = ObjectType.ARTICULATION
@@ -160,6 +205,11 @@ class CoffeeMachine(LibraryObject, Pressable):
     pressedness_threshold = 0.5
 
     def __init__(self, prim_path: str | None = None, initial_pose: Pose | None = None):
+        if not self.usd_path:
+            raise RuntimeError(
+                "CoffeeMachine asset USD path is empty. "
+                "Set ISAACLAB_ARENA_COFFEE_MACHINE_USD_PATH to a valid USD path or restore Lightwheel connectivity."
+            )
         super().__init__(
             prim_path=prim_path,
             initial_pose=initial_pose,
