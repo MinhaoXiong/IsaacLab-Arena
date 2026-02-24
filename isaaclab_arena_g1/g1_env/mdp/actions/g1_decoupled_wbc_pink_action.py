@@ -262,10 +262,7 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
 
     def _build_nav_arm_hang_upper_body_targets(self) -> np.ndarray:
         """Build a per-upper-body-joint reference for arm-down navigation posture."""
-        # Avoid get_initial_upper_body_pose() here because some RobotModel
-        # paths do not initialize `initial_body_pose`.
-        q_default = np.asarray(self.robot_model.q_default, dtype=np.float64).reshape(-1)
-        upper_q = q_default[self._upper_body_joint_indices].copy().astype(np.float64)
+        upper_q = self.robot_model.get_initial_upper_body_pose().copy().astype(np.float64)
         full_to_upper = {int(full_idx): int(i) for i, full_idx in enumerate(self._upper_body_joint_indices)}
 
         def _set_joint(joint_name: str, value: float) -> None:
