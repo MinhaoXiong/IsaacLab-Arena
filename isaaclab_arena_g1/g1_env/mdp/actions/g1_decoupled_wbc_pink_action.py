@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 import numpy as np
 import torch
 from collections.abc import Sequence
@@ -106,6 +107,21 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         self.upperbody_controller = G1WBCUpperbodyController(
             robot_model=self.robot_model,
             body_active_joint_groups=["arms"],
+        )
+
+        # Navigation-phase upper-body fallback:
+        # prioritize a stable arm-down joint reference over wrist pose IK targets.
+        nav_hang_enable_raw = str(os.environ.get("G1_NAV_ARM_HANG_ENABLE", "1")).strip().lower()
+        self._nav_arm_hang_enable = nav_hang_enable_raw not in {"0", "false", "off", "no"}
+        try:
+            self._nav_arm_hang_speed_thresh = float(os.environ.get("G1_NAV_ARM_HANG_SPEED_THRESH", "0.02"))
+        except ValueError:
+            self._nav_arm_hang_speed_thresh = 0.02
+        self._upper_body_joint_indices = self.robot_model.get_joint_group_indices("upper_body")
+        self._nav_arm_hang_upper_body_targets = self._build_nav_arm_hang_upper_body_targets()
+        print(
+            "[g1][nav_arm_hang] "
+            f"enable={self._nav_arm_hang_enable}, speed_thresh={self._nav_arm_hang_speed_thresh:.4f}"
         )
 
     # Properties.
@@ -243,6 +259,62 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
             assert action_dim >= BASE_ACTION_DIM, f"Invalid WBC-PINK action dim: {action_dim}"
 
         return left_hand_state, right_hand_state
+
+    def _build_nav_arm_hang_upper_body_targets(self) -> np.ndarray:
+        """Build a per-upper-body-joint reference for arm-down navigation posture."""
+        upper_q = self.robot_model.get_initial_upper_body_pose().copy().astype(np.float64)
+        full_to_upper = {int(full_idx): int(i) for i, full_idx in enumerate(self._upper_body_joint_indices)}
+
+        def _set_joint(joint_name: str, value: float) -> None:
+            if joint_name not in self.robot_model.joint_to_dof_index:
+                return
+            full_idx = int(self.robot_model.dof_index(joint_name))
+            upper_idx = full_to_upper.get(full_idx, None)
+            if upper_idx is None:
+                return
+            upper_q[upper_idx] = float(value)
+
+        def _env_float(name: str, default: float) -> float:
+            try:
+                return float(os.environ.get(name, str(default)))
+            except ValueError:
+                return float(default)
+
+        shoulder_pitch = _env_float("G1_NAV_ARM_HANG_SHOULDER_PITCH", 0.10)
+        shoulder_roll = _env_float("G1_NAV_ARM_HANG_SHOULDER_ROLL", 0.22)
+        shoulder_yaw = _env_float("G1_NAV_ARM_HANG_SHOULDER_YAW", 0.00)
+        elbow = _env_float("G1_NAV_ARM_HANG_ELBOW", 0.00)
+        wrist_roll = _env_float("G1_NAV_ARM_HANG_WRIST_ROLL", 0.00)
+        wrist_pitch = _env_float("G1_NAV_ARM_HANG_WRIST_PITCH", 0.00)
+        wrist_yaw = _env_float("G1_NAV_ARM_HANG_WRIST_YAW", 0.00)
+
+        _set_joint("left_shoulder_pitch_joint", shoulder_pitch)
+        _set_joint("left_shoulder_roll_joint", shoulder_roll)
+        _set_joint("left_shoulder_yaw_joint", shoulder_yaw)
+        _set_joint("left_elbow_joint", elbow)
+        _set_joint("left_wrist_roll_joint", wrist_roll)
+        _set_joint("left_wrist_pitch_joint", wrist_pitch)
+        _set_joint("left_wrist_yaw_joint", wrist_yaw)
+
+        _set_joint("right_shoulder_pitch_joint", shoulder_pitch)
+        _set_joint("right_shoulder_roll_joint", -shoulder_roll)
+        _set_joint("right_shoulder_yaw_joint", shoulder_yaw)
+        _set_joint("right_elbow_joint", elbow)
+        _set_joint("right_wrist_roll_joint", wrist_roll)
+        _set_joint("right_wrist_pitch_joint", wrist_pitch)
+        _set_joint("right_wrist_yaw_joint", wrist_yaw)
+
+        return upper_q
+
+    def _should_prioritize_nav_arm_hang(self, navigate_cmd: torch.Tensor) -> bool:
+        if not self._nav_arm_hang_enable:
+            return False
+        if self.cfg.use_p_control and self._is_navigating:
+            return True
+        if navigate_cmd.numel() == 0:
+            return False
+        nav_speed = float(torch.linalg.vector_norm(navigate_cmd, dim=-1).max().item())
+        return nav_speed > self._nav_arm_hang_speed_thresh
 
     # """
     # Operations.
@@ -394,6 +466,9 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
                 navigate_cmd[:, 0] = computed_lin_vel_x
                 navigate_cmd[:, 1] = computed_lin_vel_y
                 navigate_cmd[:, 2] = computed_ang_vel
+
+        if self._should_prioritize_nav_arm_hang(navigate_cmd):
+            target_upper_body_joints = self._nav_arm_hang_upper_body_targets.copy()
 
         self._navigate_cmd = navigate_cmd.clone()
 
