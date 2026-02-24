@@ -110,7 +110,7 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         )
         self._upper_body_joint_indices = self.robot_model.get_joint_group_indices("upper_body")
         self._full_index_to_joint_name = {int(v): k for k, v in self.robot_model.joint_to_dof_index.items()}
-        nav_arm_enable_raw = str(os.environ.get("G1_NAV_STRAIGHT_ARM_ENABLE", "1")).strip().lower()
+        nav_arm_enable_raw = str(os.environ.get("G1_NAV_STRAIGHT_ARM_ENABLE", "0")).strip().lower()
         self._nav_straight_arm_enable = nav_arm_enable_raw not in {"0", "false", "off", "no"}
         try:
             self._nav_straight_arm_speed_threshold = float(os.environ.get("G1_NAV_STRAIGHT_ARM_SPEED_THRESH", "0.02"))
