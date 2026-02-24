@@ -117,6 +117,8 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         except ValueError:
             self._nav_straight_arm_speed_threshold = 0.02
         self._nav_straight_arm_targets = self._build_nav_straight_arm_targets()
+        self._debug_nav_straight_arm_applied = False
+        self._debug_target_upper_body_joints = self._nav_straight_arm_targets.copy()
         print(
             "[g1][nav_straight_arm] "
             f"enable={self._nav_straight_arm_enable}, speed_thresh={self._nav_straight_arm_speed_threshold:.4f}"
@@ -472,8 +474,11 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
                 navigate_cmd[:, 1] = computed_lin_vel_y
                 navigate_cmd[:, 2] = computed_ang_vel
 
-        if self._should_use_nav_straight_arm(navigate_cmd):
+        nav_straight_arm_applied = self._should_use_nav_straight_arm(navigate_cmd)
+        if nav_straight_arm_applied:
             target_upper_body_joints = self._nav_straight_arm_targets.copy()
+        self._debug_nav_straight_arm_applied = bool(nav_straight_arm_applied)
+        self._debug_target_upper_body_joints = target_upper_body_joints.copy()
 
         self._navigate_cmd = navigate_cmd.clone()
 

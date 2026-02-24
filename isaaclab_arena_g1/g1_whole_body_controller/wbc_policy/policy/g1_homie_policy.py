@@ -57,6 +57,12 @@ class G1HomiePolicyV2(WBCPolicy):
         self.pitch_cmd = self.config["rpy_cmd"][1]
         self.yaw_cmd = self.config["rpy_cmd"][2]
         self.gait_indices = torch.zeros((self.num_envs, 1), dtype=torch.float32)
+        self.debug_last_policy_name = "stand"
+        self.debug_last_cmd_norm = 0.0
+        self.debug_last_cmd = np.zeros((self.num_envs, 3), dtype=np.float32)
+        self.debug_last_body_action = np.zeros((self.num_envs, 15), dtype=np.float32)
+        self.debug_last_obs_cmd_slice = np.zeros((self.num_envs, 7), dtype=np.float32)
+        self.debug_last_single_obs_cmd_slice = np.zeros((self.num_envs, 7), dtype=np.float32)
 
     def reset(self, env_ids: torch.Tensor):
         """Reset the policy.
@@ -80,6 +86,12 @@ class G1HomiePolicyV2(WBCPolicy):
         self.roll_cmd = self.config["rpy_cmd"][0]
         self.pitch_cmd = self.config["rpy_cmd"][1]
         self.yaw_cmd = self.config["rpy_cmd"][2]
+        self.debug_last_policy_name = "stand"
+        self.debug_last_cmd_norm = 0.0
+        self.debug_last_cmd = np.zeros((self.num_envs, 3), dtype=np.float32)
+        self.debug_last_body_action = np.zeros((self.num_envs, 15), dtype=np.float32)
+        self.debug_last_obs_cmd_slice = np.zeros((self.num_envs, 7), dtype=np.float32)
+        self.debug_last_single_obs_cmd_slice = np.zeros((self.num_envs, 7), dtype=np.float32)
 
     def load_onnx_policy(self, model_path: str) -> Callable[[torch.Tensor], torch.Tensor]:
         """Load the ONNX policy from the model path.
@@ -162,6 +174,7 @@ class G1HomiePolicyV2(WBCPolicy):
         single_obs[:, 13 : 13 + n_joints] = qj_scaled
         single_obs[:, 13 + n_joints : 13 + 2 * n_joints] = dqj_scaled
         single_obs[:, 13 + 2 * n_joints : 13 + 2 * n_joints + 15] = self.action
+        self.debug_last_single_obs_cmd_slice = single_obs[:, :7].copy()
 
         return single_obs, single_obs_dim
 
@@ -238,12 +251,17 @@ class G1HomiePolicyV2(WBCPolicy):
         # Run policy inference
         with torch.no_grad():
             # Select appropriate policy based on command magnitude
-            if np.linalg.norm(self.cmd) < 0.05:
+            cmd_norm = float(np.linalg.norm(self.cmd))
+            self.debug_last_cmd_norm = cmd_norm
+            self.debug_last_cmd = np.asarray(self.cmd, dtype=np.float32).copy()
+            if cmd_norm < 0.05:
                 # Use standing policy for small commands
                 policy = self.policy_1
+                self.debug_last_policy_name = "stand"
             else:
                 # Use walking policy for movement commands
                 policy = self.policy_2
+                self.debug_last_policy_name = "walk"
 
             self.action = policy(self.obs_tensor).detach().numpy()
 
@@ -254,5 +272,8 @@ class G1HomiePolicyV2(WBCPolicy):
         else:
             cmd_q = self.observation["q"][self.robot_model.get_joint_group_indices("lower_body")]
         # Only produce target joint positions from WBC, no kinematics nor dynamics
+        self.debug_last_body_action = np.asarray(cmd_q, dtype=np.float32).copy()
+        if self.obs_buffer.shape[1] >= 7:
+            self.debug_last_obs_cmd_slice = self.obs_buffer[:, :7].copy()
 
         return {"body_action": cmd_q}
