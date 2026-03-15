@@ -118,10 +118,37 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
             self._nav_straight_arm_speed_threshold = 0.02
         self._nav_straight_arm_targets = self._build_nav_straight_arm_targets()
         self._debug_nav_straight_arm_applied = False
+        self._suppress_nav_straight_arm = False  # set by runner during arm_mp/replay
         self._debug_target_upper_body_joints = self._nav_straight_arm_targets.copy()
         print(
             "[g1][nav_straight_arm] "
             f"enable={self._nav_straight_arm_enable}, speed_thresh={self._nav_straight_arm_speed_threshold:.4f}"
+        )
+
+        # Direct joint override for arm motion planning (bypasses PINK IK).
+        # Set externally by the runner; cleared after each step.
+        self._override_right_arm_joints: np.ndarray | None = None
+        # Build mapping: right arm joint name -> index in upper_body array
+        self._right_arm_upper_body_indices: list[int] = []
+        _right_arm_joint_names = [
+            "right_shoulder_pitch_joint",
+            "right_shoulder_roll_joint",
+            "right_shoulder_yaw_joint",
+            "right_elbow_joint",
+            "right_wrist_roll_joint",
+            "right_wrist_pitch_joint",
+            "right_wrist_yaw_joint",
+        ]
+        upper_idx_by_name: dict[str, int] = {}
+        for i, full_idx in enumerate(self._upper_body_joint_indices):
+            jname = self._full_index_to_joint_name.get(int(full_idx), None)
+            if jname is not None:
+                upper_idx_by_name[jname] = int(i)
+        for jname in _right_arm_joint_names:
+            idx = upper_idx_by_name.get(jname, -1)
+            self._right_arm_upper_body_indices.append(idx)
+        print(
+            f"[g1][override_right_arm] upper_body indices: {self._right_arm_upper_body_indices}"
         )
 
     # Properties.
@@ -316,6 +343,8 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
     def _should_use_nav_straight_arm(self, navigate_cmd: torch.Tensor) -> bool:
         if not self._nav_straight_arm_enable:
             return False
+        if self._suppress_nav_straight_arm:
+            return False
         if self.cfg.use_p_control and self._is_navigating:
             return True
         if navigate_cmd.numel() == 0:
@@ -477,6 +506,15 @@ class G1DecoupledWBCPinkAction(G1DecoupledWBCJointAction):
         nav_straight_arm_applied = self._should_use_nav_straight_arm(navigate_cmd)
         if nav_straight_arm_applied:
             target_upper_body_joints = self._nav_straight_arm_targets.copy()
+
+        # Direct right-arm joint override (set by runner during arm_mp phase).
+        if self._override_right_arm_joints is not None:
+            q_override = np.asarray(self._override_right_arm_joints, dtype=np.float64).reshape(-1)
+            for k, ub_idx in enumerate(self._right_arm_upper_body_indices):
+                if 0 <= ub_idx < len(target_upper_body_joints) and k < len(q_override):
+                    target_upper_body_joints[ub_idx] = q_override[k]
+            self._override_right_arm_joints = None  # consume: one-shot per step
+
         self._debug_nav_straight_arm_applied = bool(nav_straight_arm_applied)
         self._debug_target_upper_body_joints = target_upper_body_joints.copy()
 
